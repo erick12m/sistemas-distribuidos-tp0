@@ -25,8 +25,12 @@ docker-image:
 	# docker rmi `docker images --filter label=intermediateStageToBeDeleted=true -q`
 .PHONY: docker-image
 
-docker-compose-up: docker-image
-	docker compose -f docker-compose-dev.yaml up -d --build
+docker-compose-up:
+	@echo "Generating Docker Compose configuration for $(clients) clients..."
+	chmod u+x docker-compose-script-with-n-clients.sh
+	./docker-compose-script-with-n-clients.sh $(clients) > docker-compose-n-clients.yaml
+	$(MAKE) docker-image
+	docker compose -f docker-compose-n-clients.yaml up -d --build
 .PHONY: docker-compose-up
 
 docker-compose-down:
@@ -35,5 +39,5 @@ docker-compose-down:
 .PHONY: docker-compose-down
 
 docker-compose-logs:
-	docker compose -f docker-compose-dev.yaml logs -f
+	docker compose -f docker-compose-n-clients.yaml logs -f
 .PHONY: docker-compose-logs
