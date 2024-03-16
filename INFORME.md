@@ -45,3 +45,63 @@ client2 | time="2024-03-16 02:52:13" level=info msg="action: config | result: su
 ```
 
 Se comprobó que utilizó la cache al hacer `make docker-compose-down` seguido de `make docker-compose-up clients=2` queriendo decir que no se montó de nuevo toda la imagen por el cambio de configuración.
+
+### Ejercicio N°3:
+
+Se creó un nuevo contenedor `netcat-client` con su propio dockerfile en el que se instala netcat y se utiliza un script para comprobar que la respuesta al enviarle un mensaje al server sea la misma que dicho mensaje.
+
+La ip y el puerto del serrver se pueden configurar en `netcat-client/config.env`
+
+Para realizar el test basta con ejecutar `make run-netcat-test` y observar los resultados. En caso de éxito se verá por terminal
+
+```bash
+docker compose -f docker-compose-n-clients.yaml up -d --build --remove-orphans
+[+] Running 1/0
+ ✔ Container server  Running                                                                                                                                                         0.0s
+make[1]: se sale del directorio '/home/erick/distribuidos/sistemas-distribuidos-tp0'
+docker run --rm --network sistemas-distribuidos-tp0_testing_net --env-file ./netcat-client/config.env --name netcat-client netcat-client:latest
+OK: Server response is correct: message: Test message to server, response: Test message to server
+```
+
+En caso de error; por ejemplo al cambiar el puerto del server a uno invalido:
+
+```bash
+docker compose -f docker-compose-n-clients.yaml up -d --build --remove-orphans
+[+] Running 1/0
+ ✔ Container server  Running                                                                                                                                                         0.0s
+make[1]: se sale del directorio '/home/erick/distribuidos/sistemas-distribuidos-tp0'
+docker run --rm --network sistemas-distribuidos-tp0_testing_net --env-file ./netcat-client/config.env --name netcat-client netcat-client:latest
+ERROR: Server response is incorrect: message: Test message to server, response:
+```
+
+### Ejercicio N°4:
+
+Se modificó `client/common/client.go` agregando un channel para manejar señales, haciendo que cuando llegue una SIGTERM se cierre el socket; dicho channel y termine el cliente de forma gracefull
+
+Para el server se modificó `server/common/server.py` para agregar un handler de señales; de igual forma que en el cliente se encarga de cerrar primero el socket; ademàs de agregar modificaciones para el momento de aceptar conexiones que no acepte una nueva si se recibe el SIGTERM.
+
+Además se cambió el tiempo de timeout utilizado `make docker-compose-down` a 10 segundos, para que se pueda apreciar en el cliente el cierre gracefull, ya que este contaba con un sleep de 5segundos por iteración.
+
+Se puede comprobar analizando los logs al momento de ejecutar `make docker-compose-down`
+
+```bash
+client2  | time="2024-03-16 22:34:52" level=info msg="action: graceful_shutdown | result: in_progress | client_id: 2"
+client2  | time="2024-03-16 22:34:52" level=info msg="action: socket_shutdown | result: success | client_id: 2"
+client2  | time="2024-03-16 22:34:52" level=info msg="action: signal_handler_channel_shutdown | result: success | client_id: 2"
+client2  | time="2024-03-16 22:34:52" level=info msg="action: graceful_shutdown | result: success | client_id: 2"
+client2  | time="2024-03-16 22:34:52" level=info msg="action: loop_finished | result: success | client_id: 2"
+client1  | time="2024-03-16 22:34:52" level=info msg="action: graceful_shutdown | result: in_progress | client_id: 1"
+client1  | time="2024-03-16 22:34:52" level=info msg="action: socket_shutdown | result: success | client_id: 1"
+client1  | time="2024-03-16 22:34:52" level=info msg="action: signal_handler_channel_shutdown | result: success | client_id: 1"
+client1  | time="2024-03-16 22:34:52" level=info msg="action: graceful_shutdown | result: success | client_id: 1"
+client1  | time="2024-03-16 22:34:52" level=info msg="action: loop_finished | result: success | client_id: 1"
+client2 exited with code 0
+client2 exited with code 0
+client1 exited with code 0
+client1 exited with code 0
+server   | 2024-03-16 22:34:52 INFO     action: graceful_shutdown | result: in_progress
+server   | 2024-03-16 22:34:52 INFO     action: socket_shutdown | result: success
+server   | 2024-03-16 22:34:52 INFO     action: graceful_shutdown | result: success
+server   | 2024-03-16 22:34:52 ERROR    action: accept_connections | result: fail | error: [Errno 22] Invalid argument
+server exited with code 0
+```

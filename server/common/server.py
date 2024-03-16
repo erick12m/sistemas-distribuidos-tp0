@@ -1,5 +1,6 @@
 import socket
 import logging
+import signal
 
 
 class Server:
@@ -8,7 +9,28 @@ class Server:
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
+        self._server_shutdown = False
+        
+        # Register signal handler for graceful shutdown
+        signal.signal(signal.SIGTERM, self.__signal_handler)
+     
+    def __signal_handler(self, signum, frame):
+        """
+        Signal handler for graceful shutdown
+        """
+        if signum == signal.SIGTERM:
+            self.graceful_shutdown()
 
+    def graceful_shutdown(self):
+        """
+        Graceful shutdown of the server
+        """
+        logging.info("action: graceful_shutdown | result: in_progress")
+        self._server_shutdown = True
+        self._server_socket.shutdown(socket.SHUT_RDWR)
+        logging.info("action: socket_shutdown | result: success")
+        logging.info("action: graceful_shutdown | result: success")
+           
     def run(self):
         """
         Dummy Server loop
@@ -18,11 +40,10 @@ class Server:
         finishes, servers starts to accept new connections again
         """
 
-        # TODO: Modify this program to handle signal to graceful shutdown
-        # the server
-        while True:
+        while not self._server_shutdown:
             client_sock = self.__accept_new_connection()
-            self.__handle_client_connection(client_sock)
+            if client_sock:
+                self.__handle_client_connection(client_sock)
 
     def __handle_client_connection(self, client_sock):
         """
@@ -52,7 +73,13 @@ class Server:
         """
 
         # Connection arrived
-        logging.info('action: accept_connections | result: in_progress')
-        c, addr = self._server_socket.accept()
-        logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
-        return c
+        if self._server_shutdown:
+            return None
+        try:
+            logging.info('action: accept_connections | result: in_progress')
+            c, addr = self._server_socket.accept()
+            logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
+            return c
+        except OSError as e:
+            logging.error(f'action: accept_connections | result: fail | error: {e}')
+            return None
