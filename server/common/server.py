@@ -28,6 +28,8 @@ class Server:
         logging.info("action: graceful_shutdown | result: in_progress")
         self._server_shutdown = True
         self._server_socket.shutdown(socket.SHUT_RDWR)
+        self._server_socket.close()
+        logging.info('server shutdown in graceful: {}'.format(self._server_shutdown))
         logging.info("action: socket_shutdown | result: success")
         logging.info("action: graceful_shutdown | result: success")
            
@@ -52,6 +54,8 @@ class Server:
         If a problem arises in the communication with the client, the
         client socket will also be closed
         """
+        if self._server_shutdown:
+            return
         try:
             # TODO: Modify the receive to avoid short-reads
             msg = client_sock.recv(1024).rstrip().decode('utf-8')
@@ -71,6 +75,8 @@ class Server:
         Function blocks until a connection to a client is made.
         Then connection created is printed and returned
         """
+        
+        logging.info('server shutdown in accept: {}'.format(self._server_shutdown))
 
         # Connection arrived
         if self._server_shutdown:

@@ -70,20 +70,7 @@ loop:
 			)
 			break loop
 		case <-signalHandlerChannel:
-			log.Infof("action: graceful_shutdown | result: in_progress | client_id: %v",
-				c.config.ID,
-			)
-			c.conn.Close()
-			log.Infof("action: socket_shutdown | result: success | client_id: %v",
-				c.config.ID,
-			)
-			close(signalHandlerChannel)
-			log.Infof("action: signal_handler_channel_shutdown | result: success | client_id: %v",
-				c.config.ID,
-			)
-			log.Infof("action: graceful_shutdown | result: success | client_id: %v",
-				c.config.ID,
-			)
+			c.handleShutdown(signalHandlerChannel)
 			break loop
 
 		default:
@@ -120,4 +107,21 @@ loop:
 	}
 
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+}
+
+func (c *Client) handleShutdown(signalHandlerChannel chan os.Signal) {
+	log.Infof("action: graceful_shutdown | result: in_progress | client_id: %v",
+		c.config.ID,
+	)
+	c.conn.Close()
+	log.Infof("action: socket_shutdown | result: success | client_id: %v",
+		c.config.ID,
+	)
+	close(signalHandlerChannel)
+	log.Infof("action: signal_handler_channel_shutdown | result: success | client_id: %v",
+		c.config.ID,
+	)
+	log.Infof("action: graceful_shutdown | result: success | client_id: %v",
+		c.config.ID,
+	)
 }
