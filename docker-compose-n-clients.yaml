@@ -21,17 +21,14 @@ services:
     environment:
       - CLI_ID=1
       - CLI_LOG_LEVEL=DEBUG
-      - CLI_NAME=Juan
-      - CLI_LASTNAME=Gomez
-      - CLI_DOCUMENT=12345671
-      - CLI_BIRTHDATE=1990-01-01
-      - CLI_NUMBER=7571
+      - CLI_BETS_FILE=agency-1.csv
     networks:
       - testing_net
     depends_on:
       - server
     volumes:
       - ./client/config.yaml:/config.yaml
+      - ./.data/agency-1.csv:/agency-1.csv
 
   
   client2:
@@ -41,17 +38,14 @@ services:
     environment:
       - CLI_ID=2
       - CLI_LOG_LEVEL=DEBUG
-      - CLI_NAME=Pedro
-      - CLI_LASTNAME=Perez
-      - CLI_DOCUMENT=12345672
-      - CLI_BIRTHDATE=1990-01-02
-      - CLI_NUMBER=7572
+      - CLI_BETS_FILE=agency-2.csv
     networks:
       - testing_net
     depends_on:
       - server
     volumes:
       - ./client/config.yaml:/config.yaml
+      - ./.data/agency-2.csv:/agency-2.csv
 
   
   client3:
@@ -61,17 +55,14 @@ services:
     environment:
       - CLI_ID=3
       - CLI_LOG_LEVEL=DEBUG
-      - CLI_NAME=Sofia
-      - CLI_LASTNAME=Rodriguez
-      - CLI_DOCUMENT=12345673
-      - CLI_BIRTHDATE=1990-01-03
-      - CLI_NUMBER=7573
+      - CLI_BETS_FILE=agency-3.csv
     networks:
       - testing_net
     depends_on:
       - server
     volumes:
       - ./client/config.yaml:/config.yaml
+      - ./.data/agency-3.csv:/agency-3.csv
 
   
   client4:
@@ -81,17 +72,14 @@ services:
     environment:
       - CLI_ID=4
       - CLI_LOG_LEVEL=DEBUG
-      - CLI_NAME=Laura
-      - CLI_LASTNAME=Gonzalez
-      - CLI_DOCUMENT=12345674
-      - CLI_BIRTHDATE=1990-01-04
-      - CLI_NUMBER=7574
+      - CLI_BETS_FILE=agency-4.csv
     networks:
       - testing_net
     depends_on:
       - server
     volumes:
       - ./client/config.yaml:/config.yaml
+      - ./.data/agency-4.csv:/agency-4.csv
 
   
   client5:
@@ -101,17 +89,14 @@ services:
     environment:
       - CLI_ID=5
       - CLI_LOG_LEVEL=DEBUG
-      - CLI_NAME=Erick
-      - CLI_LASTNAME=Martinez
-      - CLI_DOCUMENT=12345675
-      - CLI_BIRTHDATE=1990-01-05
-      - CLI_NUMBER=7575
+      - CLI_BETS_FILE=agency-5.csv
     networks:
       - testing_net
     depends_on:
       - server
     volumes:
       - ./client/config.yaml:/config.yaml
+      - ./.data/agency-5.csv:/agency-5.csv
 
 
 networks:

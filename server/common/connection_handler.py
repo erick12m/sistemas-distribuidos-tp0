@@ -30,6 +30,5 @@ class ConnectionHandler:
         except OSError as e:
             logging.error(f"action: read_message_size | result: fail | error: {e}")
             raise OSError("Socket connection broken")
-        logging.info(f"action: read_message | result: success | msg: {message}")
         return message
         

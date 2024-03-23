@@ -35,13 +35,8 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("loop", "period")
 	v.BindEnv("loop", "lapse")
 	v.BindEnv("log", "level")
-
-	// Add client data env variables
-	v.BindEnv("name")
-	v.BindEnv("lastname")
-	v.BindEnv("document")
-	v.BindEnv("birthdate")
-	v.BindEnv("number")
+	v.BindEnv("batch", "size")
+	v.BindEnv("bets_file")
 
 	// Try to read configuration from config file. If config file
 	// does not exists then ReadInConfig will fail but configuration
@@ -85,12 +80,14 @@ func InitLogger(logLevel string) error {
 // PrintConfig Print all the configuration parameters of the program.
 // For debugging purposes only
 func PrintConfig(v *viper.Viper) {
-	logrus.Infof("action: config | result: success | client_id: %s | server_address: %s | loop_lapse: %v | loop_period: %v | log_level: %s",
+	logrus.Infof("action: config | result: success | client_id: %s | server_address: %s | loop_lapse: %v | loop_period: %v | log_level: %s | batch_size: %d | bets_file: %s",
 		v.GetString("id"),
 		v.GetString("server.address"),
 		v.GetDuration("loop.lapse"),
 		v.GetDuration("loop.period"),
 		v.GetString("log.level"),
+		v.GetInt("batch.size"),
+		v.GetString("bets.file"),
 	)
 }
 
@@ -112,6 +109,8 @@ func main() {
 		ID:            v.GetString("id"),
 		LoopLapse:     v.GetDuration("loop.lapse"),
 		LoopPeriod:    v.GetDuration("loop.period"),
+		BatchSize:     v.GetInt("batch.size"),
+		BetsFile:      v.GetString("bets.file"),
 	}
 
 	clientData := common.ClientData{

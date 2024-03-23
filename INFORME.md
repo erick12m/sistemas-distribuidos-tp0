@@ -105,3 +105,19 @@ server   | 2024-03-16 22:34:52 INFO     action: graceful_shutdown | result: succ
 server   | 2024-03-16 22:34:52 ERROR    action: accept_connections | result: fail | error: [Errno 22] Invalid argument
 server exited with code 0
 ```
+
+### Ejercicio N°5:
+
+Para este ejercicio se cambió en general tanto cliente como servidor, ambos con la misma estructura; tienen un stream encargado de realizar las escrituras y lecturas del socket para evitar short-read y short-write; una estructura Connection Handler encargada de usar el stream y servir de puente entre el servidor/cliente y el stream, esta estructura se encarga de el armado de los mensajes y su protocolo, por ejemplo se encarga de enviar la longitod del mensaje antes de la data en si; asì el otro extremo sabe cuántos bytes leer.
+
+El protocolo consiste en el envío de mensajes usando TCP, informando primero en 4 bytes la longitud de la data a enviar seguido de la data en sí; que debe cumplir con la longitud informada.
+
+Ademàs se modificó el script generador de docker compose para agregar las nuevas variables de entorno y las apuestas enviadas son separadas por coma; en este momento los clientes envian de a una apuesta, pero el server ya puede deserializar de a mas de una si se separan con un salto de línea.
+
+Para la ejecución basta con correr `make docker-compose-up clients=5` y observer en los logs los mensajes de apuesta_almacenada del server.
+
+### Ejercicio N°6:
+
+Se modificó la lógica del cliente, para ahora usar el archivo de apuestas correspondiente, el cual se va leyendo de a batches configurables con la nueva variable de entorno agregada, y se envian dichos batches al server, cuando se obtiene una respuesta del server se procede a enviar el siguiente batch, así hasta que se completa de leer el archivo, y se envía un mensaje Finished, que cuando el server lo lee da por finalizada la conexión
+
+Para la ejecución basta con correr `make docker-compose-up clients=5` Se puede observer en los archivos del container del server como se escriben las 78697 de los diferentes clientes en el archivo bets.csv. Además de los logs.

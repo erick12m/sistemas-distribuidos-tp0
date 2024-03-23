@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"os"
 )
 
 func serialize(data ClientData, agency string) string {
@@ -14,4 +15,12 @@ func serialize(data ClientData, agency string) string {
 		data.Birthdate,
 		data.Number,
 	)
+}
+
+func openBetFile(betsFile string) (*os.File, error) {
+	file, err := os.Open(betsFile)
+	if err != nil {
+		return nil, err
+	}
+	return file, nil
 }
