@@ -1,8 +1,6 @@
 package common
 
 import (
-	"bufio"
-	"fmt"
 	"net"
 	"os"
 	"os/signal"
@@ -23,14 +21,24 @@ type ClientConfig struct {
 // Client Entity that encapsulates how
 type Client struct {
 	config ClientConfig
-	conn   net.Conn
+	conn   ConnectionHandler
+	data   ClientData
 }
 
-// NewClient Initializes a new client receiving the configuration
+type ClientData struct {
+	Name      string
+	LastName  string
+	Document  string
+	Birthdate string
+	Number    string
+}
+
+// NewClient Initializes a new client receiving the configuration and data
 // as a parameter
-func NewClient(config ClientConfig) *Client {
+func NewClient(config ClientConfig, data ClientData) *Client {
 	client := &Client{
 		config: config,
+		data:   data,
 	}
 	return client
 }
@@ -47,66 +55,40 @@ func (c *Client) createClientSocket() error {
 			err,
 		)
 	}
-	c.conn = conn
+	stream := initStream(conn, c.config.ID)
+	c.conn = *InitConnectionHandler(stream, c.config.ID)
 	return nil
 }
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
-	// autoincremental msgID to identify every message sent
-	msgID := 1
 
 	// Set up a signal handler to gracefully shutdown the client
 	signalHandlerChannel := make(chan os.Signal, 1)
 	signal.Notify(signalHandlerChannel, syscall.SIGTERM)
 
-loop:
-	// Send messages if the loopLapse threshold has not been surpassed
-	for timeout := time.After(c.config.LoopLapse); ; {
-		select {
-		case <-timeout:
-			log.Infof("action: timeout_detected | result: success | client_id: %v",
-				c.config.ID,
-			)
-			break loop
-		case <-signalHandlerChannel:
-			c.handleShutdown(signalHandlerChannel)
-			break loop
-
-		default:
-		}
-
-		// Create the connection the server in every loop iteration. Send an
-		c.createClientSocket()
-
-		// TODO: Modify the send to avoid short-write
-		fmt.Fprintf(
-			c.conn,
-			"[CLIENT %v] Message N°%v\n",
-			c.config.ID,
-			msgID,
-		)
-		msg, err := bufio.NewReader(c.conn).ReadString('\n')
-		msgID++
-		c.conn.Close()
-
-		if err != nil {
-			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-				c.config.ID,
-				err,
-			)
-			return
-		}
-		log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
-			c.config.ID,
-			msg,
-		)
-
-		// Wait a time between sending one message and the next one
-		time.Sleep(c.config.LoopPeriod)
+	select {
+	case <-signalHandlerChannel:
+		c.handleShutdown(signalHandlerChannel)
+	default:
 	}
 
-	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+	// Create the connection the server in every loop iteration. Send an
+	c.createClientSocket()
+
+	// Send the message to the server
+	message := serialize(c.data, c.config.ID)
+	c.conn.Write(message)
+	response, err := c.conn.Read(4)
+	if err != nil {
+		log.Errorf("action: read | result: fail | client_id: %v | error: %v",
+			c.config.ID,
+			err,
+		)
+	}
+	log.Infof("action: read | result: success | client_id: %v | response: %v", c.config.ID, response)
+	c.conn.Close()
+
 }
 
 func (c *Client) handleShutdown(signalHandlerChannel chan os.Signal) {

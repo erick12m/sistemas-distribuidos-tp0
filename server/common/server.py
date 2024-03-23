@@ -1,6 +1,8 @@
 import socket
 import logging
 import signal
+from common.connection_handler import ConnectionHandler
+from common.utils import  store_bets, deserialize_bets
 
 
 class Server:
@@ -29,18 +31,10 @@ class Server:
         self._server_shutdown = True
         self._server_socket.shutdown(socket.SHUT_RDWR)
         self._server_socket.close()
-        logging.info('server shutdown in graceful: {}'.format(self._server_shutdown))
         logging.info("action: socket_shutdown | result: success")
         logging.info("action: graceful_shutdown | result: success")
            
     def run(self):
-        """
-        Dummy Server loop
-
-        Server that accept a new connections and establishes a
-        communication with a client. After client with communucation
-        finishes, servers starts to accept new connections again
-        """
 
         while not self._server_shutdown:
             client_sock = self.__accept_new_connection()
@@ -57,15 +51,18 @@ class Server:
         if self._server_shutdown:
             return
         try:
-            # TODO: Modify the receive to avoid short-reads
-            msg = client_sock.recv(1024).rstrip().decode('utf-8')
-            addr = client_sock.getpeername()
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-            # TODO: Modify the send to avoid short-writes
-            client_sock.send("{}\n".format(msg).encode('utf-8'))
+            logging.info("action: receive_message | result: in_progress")
+            connection_handler = ConnectionHandler(client_sock)
+            message = connection_handler.read_message()
+            logging.info(f"action: receive_message | result: success | ip: {client_sock.getpeername()[0]} | msg: {message}")
+            bets = deserialize_bets(message)
+            store_bets(bets)
+            logging.info(f"action: apuesta_almacenada | result: success | dni: {bets[0].document} | numero: {bets[0].number}")
         except OSError as e:
+            connection_handler.send_message("Error storing bet")
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
+            connection_handler.send_message("Bet stored successfully")
             client_sock.close()
 
     def __accept_new_connection(self):
@@ -75,8 +72,6 @@ class Server:
         Function blocks until a connection to a client is made.
         Then connection created is printed and returned
         """
-        
-        logging.info('server shutdown in accept: {}'.format(self._server_shutdown))
 
         # Connection arrived
         if self._server_shutdown:
