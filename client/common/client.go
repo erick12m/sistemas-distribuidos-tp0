@@ -108,7 +108,7 @@ func (c *Client) StartClientLoop() {
 		}
 		c.conn.Write(batch)
 
-		response, err := c.conn.Read(4)
+		response, err := c.conn.Read()
 		if err != nil {
 			log.Errorf("action: read | result: fail | client_id: %v | error: %v",
 				c.config.ID,
@@ -118,6 +118,43 @@ func (c *Client) StartClientLoop() {
 		log.Infof("action: read | result: success | client_id: %v | response: %v", c.config.ID, response)
 	}
 	c.conn.Write("Finished")
+	// Send messages if the loopLapse threshold has not been surpassed
+	askForWinners(c)
+}
+
+func askForWinners(c *Client) {
+	log.Infof("action: ask_for_winners | result: in_progress | client_id: %v",
+		c.config.ID,
+	)
+loop:
+	for timeout := time.After(c.config.LoopLapse); ; {
+		select {
+		case <-timeout:
+			log.Infof("action: timeout_detected | result: success | client_id: %v",
+				c.config.ID,
+			)
+			break loop
+		default:
+		}
+		c.conn.Write(c.config.ID)
+		response, err := c.conn.Read()
+		if err != nil {
+			log.Errorf("action: read | result: fail | client_id: %v | error: %v",
+				c.config.ID,
+				err,
+			)
+		}
+		log.Infof("action: read | result: success | client_id: %v | response: %v", c.config.ID, response)
+		if response == "Error: not all clients finished yet" {
+			time.Sleep(c.config.LoopPeriod)
+		} else {
+			winners := getWinnersQuantity(response)
+			log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v",
+				winners,
+			)
+			break loop
+		}
+	}
 	c.conn.Close()
 }
 

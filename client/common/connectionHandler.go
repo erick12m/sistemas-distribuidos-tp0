@@ -42,7 +42,7 @@ func (h *ConnectionHandler) Write(message string) error {
 	return nil
 }
 
-func (h *ConnectionHandler) Read(size int) (string, error) {
+func (h *ConnectionHandler) Read() (string, error) {
 	messageLenghtBytes, err := h.conn.Read(4)
 	if err != nil {
 		return "", err
@@ -52,6 +52,6 @@ func (h *ConnectionHandler) Read(size int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	log.Infof("action read | result: success | message_id: %v | message: %v | message_lenght: %v", h.msgID, string(messageBytes), messageLenght)
+	log.Infof("action read | result: success  message: %v | message_lenght: %v", string(messageBytes), messageLenght)
 	return string(messageBytes), nil
 }

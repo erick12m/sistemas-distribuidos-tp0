@@ -2,7 +2,7 @@ import socket
 import logging
 import signal
 from common.connection_handler import ConnectionHandler
-from common.utils import  store_bets, deserialize_bets
+from common.utils import  get_winners_for_agency, store_bets, deserialize_bets
 
 
 class Server:
@@ -12,6 +12,8 @@ class Server:
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
         self._server_shutdown = False
+        self._connections_accepted = 0
+        self._clients_finished = 0
         
         # Register signal handler for graceful shutdown
         signal.signal(signal.SIGTERM, self.__signal_handler)
@@ -37,6 +39,7 @@ class Server:
     def run(self):
 
         while not self._server_shutdown:
+            logging.debug(f"connections_accepted: {self._connections_accepted}")
             client_sock = self.__accept_new_connection()
             if client_sock:
                 self.__handle_client_connection(client_sock)
@@ -51,22 +54,42 @@ class Server:
         if self._server_shutdown:
             return
         try:
-            while True: 
+            while True:
+                #Loop with a single client sending bets
                 logging.info("action: receive_message | result: in_progress")
                 connection_handler = ConnectionHandler(client_sock)
                 message = connection_handler.read_message()
                 logging.info(f"action: receive_message | result: success | ip: {client_sock.getpeername()[0]}")
                 if message == "Finished":
+                    self._clients_finished += 1
                     break
                 bets = deserialize_bets(message)
                 store_bets(bets)
                 connection_handler.send_message("Bets stored successfully")
+            if self.__can_return_winners():
+                logging.info("action: sorteo | result: success")
+            logging.info(f"action: store_bets | result: finished | ip: {client_sock.getpeername()[0]}")
+            while True:
+                #Loop with the client requesting the winners
+                logging.info("action: receive_winners_message | result: in_progress")
+                connection_handler = ConnectionHandler(client_sock)
+                message = connection_handler.read_message()
+                logging.info(f"action: receive_winners_message | result: success | ip: {client_sock.getpeername()[0]} | message: {message}")
+                if self.__can_return_winners():
+                    winners_message = get_winners_for_agency(message)
+                    connection_handler.send_message(winners_message)
+                    logging.info(f"action: send_winners_message | result: success | ip: {client_sock.getpeername()[0]} | message: {winners_message}")
+                    break
+                connection_handler.send_message("Error: not all clients finished yet")
+                
         except OSError as e:
             connection_handler.send_message("Error storing bet")
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
-            logging.info(f"action: store_bets | result: finished | ip: {client_sock.getpeername()[0]}")
             client_sock.close()
+            
+    def __can_return_winners(self):
+        return self._clients_finished == self._connections_accepted
 
     def __accept_new_connection(self):
         """
@@ -83,6 +106,7 @@ class Server:
             logging.info('action: accept_connections | result: in_progress')
             c, addr = self._server_socket.accept()
             logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
+            self._connections_accepted += 1
             return c
         except OSError as e:
             logging.error(f'action: accept_connections | result: fail | error: {e}')
