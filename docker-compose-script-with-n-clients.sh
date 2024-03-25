@@ -37,6 +37,8 @@ services:
       - LOGGING_LEVEL=DEBUG
     networks:
       - testing_net
+    volumes:
+      - ./server/config.ini:/config.ini
 "
 
 # Add clients to the configuration
@@ -53,6 +55,8 @@ echo "
       - testing_net
     depends_on:
       - server
+    volumes:
+      - ./client/config.yaml:/config.yaml
 "
 done
 
