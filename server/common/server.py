@@ -3,6 +3,7 @@ import logging
 import signal
 from common.connection_handler import ConnectionHandler
 from common.utils import  get_winners_for_agency, store_bets, deserialize_bets
+import multiprocessing
 
 
 class Server:
@@ -12,8 +13,11 @@ class Server:
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
         self._server_shutdown = False
-        self._connections_accepted = 0
-        self._clients_finished = 0
+        self._connections_accepted = multiprocessing.Value('i', 0)
+        self._clients_finished = multiprocessing.Value('i', 0)
+        self._informed_winners = multiprocessing.Value('i', 0)
+        self._lock_store_bets = multiprocessing.Lock()
+        
         
         # Register signal handler for graceful shutdown
         signal.signal(signal.SIGTERM, self.__signal_handler)
@@ -38,11 +42,16 @@ class Server:
            
     def run(self):
 
-        while not self._server_shutdown:
-            logging.debug(f"connections_accepted: {self._connections_accepted}")
+        while not self._server_shutdown and not self.__informed_all_clients_winners():
+            logging.debug(f"connections_accepted: {self._connections_accepted.value}")
             client_sock = self.__accept_new_connection()
             if client_sock:
-                self.__handle_client_connection(client_sock)
+                process = multiprocessing.Process(target=self.__handle_client_connection, args=(client_sock,))
+                process.start()
+        for process in multiprocessing.active_children():
+            process.join()
+        logging.info("action: server_finished | result: success")
+            
 
     def __handle_client_connection(self, client_sock):
         """
@@ -61,10 +70,12 @@ class Server:
                 message = connection_handler.read_message()
                 logging.info(f"action: receive_message | result: success | ip: {client_sock.getpeername()[0]}")
                 if message == "Finished":
-                    self._clients_finished += 1
+                    with self._clients_finished.get_lock():
+                        self._clients_finished.value += 1
                     break
                 bets = deserialize_bets(message)
-                store_bets(bets)
+                with self._lock_store_bets:
+                    store_bets(bets)
                 connection_handler.send_message("Bets stored successfully")
             if self.__can_return_winners():
                 logging.info("action: sorteo | result: success")
@@ -78,8 +89,11 @@ class Server:
                 if self.__can_return_winners():
                     winners_message = get_winners_for_agency(message)
                     connection_handler.send_message(winners_message)
+                    with self._informed_winners.get_lock():
+                        self._informed_winners.value += 1
                     logging.info(f"action: send_winners_message | result: success | ip: {client_sock.getpeername()[0]} | message: {winners_message}")
                     break
+                logging.info(f"error: not all clients finished yet | clients_finished: {self._clients_finished.value} | connections_accepted: {self._connections_accepted.value}")
                 connection_handler.send_message("Error: not all clients finished yet")
                 
         except OSError as e:
@@ -89,7 +103,8 @@ class Server:
             client_sock.close()
             
     def __can_return_winners(self):
-        return self._clients_finished == self._connections_accepted
+        with self._clients_finished.get_lock() and self._connections_accepted.get_lock():
+            return self._clients_finished.value == self._connections_accepted.value and self._connections_accepted.value > 0
 
     def __accept_new_connection(self):
         """
@@ -106,8 +121,13 @@ class Server:
             logging.info('action: accept_connections | result: in_progress')
             c, addr = self._server_socket.accept()
             logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
-            self._connections_accepted += 1
+            with self._connections_accepted.get_lock():
+                self._connections_accepted.value += 1
             return c
         except OSError as e:
             logging.error(f'action: accept_connections | result: fail | error: {e}')
             return None
+        
+    def __informed_all_clients_winners(self) -> bool:
+        with self._informed_winners.get_lock():
+            return self._informed_winners.value == self._connections_accepted and self._connections_accepted > 0
