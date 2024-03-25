@@ -48,4 +48,15 @@ def load_bets() -> list[Bet]:
         reader = csv.reader(file, quoting=csv.QUOTE_MINIMAL)
         for row in reader:
             yield Bet(row[0], row[1], row[2], row[3], row[4], row[5])
+            
+def deserialize_bets(message: str) -> list[Bet]:
+    """
+    Deserialize a message into a list of bets
+    """
+    bets = []
+    for line in message.split('\n'):
+        if line:
+            agency, first_name, last_name, document, birthdate, number = line.split(',')
+            bets.append(Bet(agency, first_name, last_name, document, birthdate, number))
+    return bets
 

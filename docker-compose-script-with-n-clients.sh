@@ -41,6 +41,9 @@ services:
       - ./server/config.ini:/config.ini
 "
 
+NAMES=("Erick" "Juan" "Pedro" "Sofia" "Laura")
+LASTNAMES=("Martinez" "Gomez" "Perez" "Rodriguez" "Gonzalez")
+
 # Add clients to the configuration
 for ((i = 1; i <= num_clients; i++)); do
 echo "  
@@ -51,6 +54,11 @@ echo "
     environment:
       - CLI_ID=$i
       - CLI_LOG_LEVEL=DEBUG
+      - CLI_NAME=${NAMES[$((i % 5))]}
+      - CLI_LASTNAME=${LASTNAMES[$((i % 5))]}
+      - CLI_DOCUMENT=1234567$i
+      - CLI_BIRTHDATE=1990-01-0$i
+      - CLI_NUMBER=757$i
     networks:
       - testing_net
     depends_on:
