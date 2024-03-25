@@ -45,3 +45,31 @@ client2 | time="2024-03-16 02:52:13" level=info msg="action: config | result: su
 ```
 
 Se comprobó que utilizó la cache al hacer `make docker-compose-down` seguido de `make docker-compose-up clients=2` queriendo decir que no se montó de nuevo toda la imagen por el cambio de configuración.
+
+### Ejercicio N°3:
+
+Se creó un nuevo contenedor `netcat-client` con su propio dockerfile en el que se instala netcat y se utiliza un script para comprobar que la respuesta al enviarle un mensaje al server sea la misma que dicho mensaje.
+
+La ip y el puerto del serrver se pueden configurar en `netcat-client/config.env`
+
+Para realizar el test basta con ejecutar `make run-netcat-test` y observar los resultados. En caso de éxito se verá por terminal
+
+```bash
+docker compose -f docker-compose-n-clients.yaml up -d --build --remove-orphans
+[+] Running 1/0
+ ✔ Container server  Running                                                                                                                                                         0.0s
+make[1]: se sale del directorio '/home/erick/distribuidos/sistemas-distribuidos-tp0'
+docker run --rm --network sistemas-distribuidos-tp0_testing_net --env-file ./netcat-client/config.env --name netcat-client netcat-client:latest
+OK: Server response is correct: message: Test message to server, response: Test message to server
+```
+
+En caso de error; por ejemplo al cambiar el puerto del server a uno invalido:
+
+```bash
+docker compose -f docker-compose-n-clients.yaml up -d --build --remove-orphans
+[+] Running 1/0
+ ✔ Container server  Running                                                                                                                                                         0.0s
+make[1]: se sale del directorio '/home/erick/distribuidos/sistemas-distribuidos-tp0'
+docker run --rm --network sistemas-distribuidos-tp0_testing_net --env-file ./netcat-client/config.env --name netcat-client netcat-client:latest
+ERROR: Server response is incorrect: message: Test message to server, response:
+```

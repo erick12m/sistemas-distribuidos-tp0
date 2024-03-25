@@ -18,6 +18,7 @@ build: deps
 docker-image:
 	docker build -f ./server/Dockerfile -t "server:latest" .
 	docker build -f ./client/Dockerfile -t "client:latest" .
+	docker build --network host -f ./netcat-client/Dockerfile -t "netcat-client:latest" .
 	# Execute this command from time to time to clean up intermediate stages generated 
 	# during client build (your hard drive will like this :) ). Don't left uncommented if you 
 	# want to avoid rebuilding client image every time the docker-compose-up command 
@@ -30,7 +31,7 @@ docker-compose-up:
 	chmod u+x docker-compose-script-with-n-clients.sh
 	./docker-compose-script-with-n-clients.sh $(clients) > docker-compose-n-clients.yaml
 	$(MAKE) docker-image
-	docker compose -f docker-compose-n-clients.yaml up -d --build
+	docker compose -f docker-compose-n-clients.yaml up -d --build --remove-orphans
 .PHONY: docker-compose-up
 
 docker-compose-down:
@@ -41,3 +42,8 @@ docker-compose-down:
 docker-compose-logs:
 	docker compose -f docker-compose-n-clients.yaml logs -f
 .PHONY: docker-compose-logs
+
+run-netcat-test:
+	docker build --network host -f ./netcat-client/Dockerfile -t "netcat-client:latest" .
+	$(MAKE) docker-compose-up clients=0
+	docker run --rm --network sistemas-distribuidos-tp0_testing_net --env-file ./netcat-client/config.env --name netcat-client netcat-client:latest
