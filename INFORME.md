@@ -134,3 +134,7 @@ Para la ejecución basta con correr `make docker-compose-up clients=5` Se puede 
 client1  | time="2024-03-24 23:19:47" level=info msg="action: read | result: success | client_id: 1 | response: 30876370,24807259"
 client1  | time="2024-03-24 23:19:47" level=info msg="action: consulta_ganadores | result: success | cant_ganadores: 2"
 ```
+
+### Ejercicio N°7:
+
+Se modificó el servidor, para que, usando la blblioteca `multiprocessing` pueda atender a multiples clientes en paralelo, para lo cual se crea un subproceso por cada conexión aceptada y se utilizan locks en las secciones críticas para acceder al estado compartido del servidor, cómo la cantidad de clientes que finalizaron, a los que se les infromó ganadores. Además de un lock para que el acceso a la función `store_bets` sea safe con multiprocessing. Para comprobar basta ejecutar nuevamente `make docker-compose-up clients=5` y analizar que el server responde exitosamente al igual que en el punto anterior.
