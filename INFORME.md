@@ -72,7 +72,7 @@ docker compose -f docker-compose-n-clients.yaml up -d --build --remove-orphans
 make[1]: se sale del directorio '/home/erick/distribuidos/sistemas-distribuidos-tp0'
 docker run --rm --network sistemas-distribuidos-tp0_testing_net --env-file ./netcat-client/config.env --name netcat-client netcat-client:latest
 ERROR: Server response is incorrect: message: Test message to server, response:
-```
+
 
 ### Ejercicio N°4:
 
@@ -105,3 +105,4 @@ server   | 2024-03-16 22:34:52 INFO     action: graceful_shutdown | result: succ
 server   | 2024-03-16 22:34:52 ERROR    action: accept_connections | result: fail | error: [Errno 22] Invalid argument
 server exited with code 0
 ```
+
