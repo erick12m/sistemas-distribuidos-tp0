@@ -114,10 +114,23 @@ El protocolo consiste en el envío de mensajes usando TCP, informando primero en
 
 Ademàs se modificó el script generador de docker compose para agregar las nuevas variables de entorno y las apuestas enviadas son separadas por coma; en este momento los clientes envian de a una apuesta, pero el server ya puede deserializar de a mas de una si se separan con un salto de línea.
 
-Para la ejecución basta con correr `make docker-compose-up clients=5` y observer en los logs los mensajes de apuesta_almacenada del server.
+Para la ejecución basta con correr `make docker-compose-up clients=5` y observar en los logs los mensajes de apuesta_almacenada del server.
 
 ### Ejercicio N°6:
 
 Se modificó la lógica del cliente, para ahora usar el archivo de apuestas correspondiente, el cual se va leyendo de a batches configurables con la nueva variable de entorno agregada, y se envian dichos batches al server, cuando se obtiene una respuesta del server se procede a enviar el siguiente batch, así hasta que se completa de leer el archivo, y se envía un mensaje Finished, que cuando el server lo lee da por finalizada la conexión
 
-Para la ejecución basta con correr `make docker-compose-up clients=5` Se puede observer en los archivos del container del server como se escriben las 78697 de los diferentes clientes en el archivo bets.csv. Además de los logs.
+Para la ejecución basta con correr `make docker-compose-up clients=5` Se puede observar en los archivos del container del server como se escriben las 78697 de los diferentes clientes en el archivo bets.csv. Además de los logs.
+
+### Ejercicio N°7:
+
+El servidor ahora vuelve a quedar loopeando luego del mansaje finish de los clientes, mientras que los clientes quedan enviando su id de agencia, hasta que el server responde exitosamente los ganadores para la agencia respectiva, luego de que pueda realizar el sorteo (cuando todos los clientes termianron de enviar sus apuestas)
+
+Los clientes vuelven a utilizar la estructura inicial de loop pero en este caso termina luego de la respuesta exitosa del server, en caso de que que el servidor no este listo para responder los ganadores se les informa a los clientes y estos se duermen por un LoopLapse y vuelven a preguntar por sus ganadores.
+
+Para la ejecución basta con correr `make docker-compose-up clients=5` Se puede observar en los logs líneas como las siguientes que indican la cantidad de ganadores para un cliente
+
+```bash
+client1  | time="2024-03-24 23:19:47" level=info msg="action: read | result: success | client_id: 1 | response: 30876370,24807259"
+client1  | time="2024-03-24 23:19:47" level=info msg="action: consulta_ganadores | result: success | cant_ganadores: 2"
+```

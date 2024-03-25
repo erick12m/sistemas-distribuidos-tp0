@@ -1,5 +1,6 @@
 import csv
 import datetime
+import logging
 import time
 
 
@@ -59,4 +60,15 @@ def deserialize_bets(message: str) -> list[Bet]:
             agency, first_name, last_name, document, birthdate, number = line.split(',')
             bets.append(Bet(agency, first_name, last_name, document, birthdate, number))
     return bets
+
+def get_winners_for_agency(agency):
+    winners = ""
+    bets = load_bets()
+    for bet in bets:
+        if bet.agency == int(agency):
+            if has_won(bet):
+                logging.info(f"action: get_winners_for_agency | result: success | agency: {agency} | winner: {bet.document}")
+                winners += f"{bet.document},"
+    winners = winners.removesuffix(',')
+    return winners
 

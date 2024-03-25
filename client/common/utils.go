@@ -3,6 +3,7 @@ package common
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 func serialize(data ClientData, agency string) string {
@@ -23,4 +24,8 @@ func openBetFile(betsFile string) (*os.File, error) {
 		return nil, err
 	}
 	return file, nil
+}
+
+func getWinnersQuantity(winnersMessage string) int {
+	return len(strings.Split(winnersMessage, ","))
 }
