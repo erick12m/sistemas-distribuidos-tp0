@@ -51,18 +51,21 @@ class Server:
         if self._server_shutdown:
             return
         try:
-            logging.info("action: receive_message | result: in_progress")
-            connection_handler = ConnectionHandler(client_sock)
-            message = connection_handler.read_message()
-            logging.info(f"action: receive_message | result: success | ip: {client_sock.getpeername()[0]} | msg: {message}")
-            bets = deserialize_bets(message)
-            store_bets(bets)
-            logging.info(f"action: apuesta_almacenada | result: success | dni: {bets[0].document} | numero: {bets[0].number}")
+            while True: 
+                logging.info("action: receive_message | result: in_progress")
+                connection_handler = ConnectionHandler(client_sock)
+                message = connection_handler.read_message()
+                logging.info(f"action: receive_message | result: success | ip: {client_sock.getpeername()[0]}")
+                if message == "Finished":
+                    break
+                bets = deserialize_bets(message)
+                store_bets(bets)
+                connection_handler.send_message("Bets stored successfully")
         except OSError as e:
             connection_handler.send_message("Error storing bet")
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
-            connection_handler.send_message("Bet stored successfully")
+            logging.info(f"action: store_bets | result: finished | ip: {client_sock.getpeername()[0]}")
             client_sock.close()
 
     def __accept_new_connection(self):

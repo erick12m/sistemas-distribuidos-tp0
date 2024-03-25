@@ -1,6 +1,7 @@
 package common
 
 import (
+	"bufio"
 	"net"
 	"os"
 	"os/signal"
@@ -16,13 +17,16 @@ type ClientConfig struct {
 	ServerAddress string
 	LoopLapse     time.Duration
 	LoopPeriod    time.Duration
+	BatchSize     int
+	BetsFile      string
 }
 
 // Client Entity that encapsulates how
 type Client struct {
-	config ClientConfig
-	conn   ConnectionHandler
-	data   ClientData
+	config    ClientConfig
+	conn      ConnectionHandler
+	data      ClientData
+	completed bool
 }
 
 type ClientData struct {
@@ -37,8 +41,9 @@ type ClientData struct {
 // as a parameter
 func NewClient(config ClientConfig, data ClientData) *Client {
 	client := &Client{
-		config: config,
-		data:   data,
+		config:    config,
+		data:      data,
+		completed: false,
 	}
 	return client
 }
@@ -75,26 +80,52 @@ func (c *Client) StartClientLoop() {
 
 	// Create the connection the server in every loop iteration. Send an
 	c.createClientSocket()
-
-	// Send the message to the server
-	message := serialize(c.data, c.config.ID)
-	c.conn.Write(message)
-	response, err := c.conn.Read(4)
+	betsFile, err := openBetFile(c.config.BetsFile)
 	if err != nil {
-		log.Errorf("action: read | result: fail | client_id: %v | error: %v",
+		log.Fatalf("action: open_file | result: fail | client_id: %v | error: %v",
 			c.config.ID,
 			err,
 		)
 	}
-	log.Infof("action: read | result: success | client_id: %v | response: %v", c.config.ID, response)
-	c.conn.Close()
+	defer betsFile.Close()
 
+	scanner := bufio.NewScanner(betsFile)
+
+	for !c.completed {
+		batch := ""
+		for i := 0; i < c.config.BatchSize; i++ {
+			if !scanner.Scan() {
+				c.completed = true
+				break
+			}
+			batch += c.config.ID + "," + scanner.Text() + "\n"
+		}
+		if err != nil {
+			log.Fatalf("action: get_bets_batch | result: fail | client_id: %v | error: %v",
+				c.config.ID,
+				err,
+			)
+		}
+		c.conn.Write(batch)
+
+		response, err := c.conn.Read(4)
+		if err != nil {
+			log.Errorf("action: read | result: fail | client_id: %v | error: %v",
+				c.config.ID,
+				err,
+			)
+		}
+		log.Infof("action: read | result: success | client_id: %v | response: %v", c.config.ID, response)
+	}
+	c.conn.Write("Finished")
+	c.conn.Close()
 }
 
 func (c *Client) handleShutdown(signalHandlerChannel chan os.Signal) {
 	log.Infof("action: graceful_shutdown | result: in_progress | client_id: %v",
 		c.config.ID,
 	)
+	c.completed = true
 	c.conn.Close()
 	log.Infof("action: socket_shutdown | result: success | client_id: %v",
 		c.config.ID,
